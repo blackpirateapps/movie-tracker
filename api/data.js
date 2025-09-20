@@ -12,29 +12,23 @@ export default async function handler(req, res) {
             authToken: process.env.TURSO_AUTH_TOKEN,
         });
 
-        const { userId } = req.query;
-        if (!userId) {
-            return res.status(400).json({ error: 'User ID is required' });
-        }
+        // REMOVED: No longer need userId from query
 
         const standardListsPromise = client.execute({
+            // REMOVED: WHERE clause
             sql: `SELECT m.*, um.list_type, um.user_rating, um.date_added
                   FROM movies m
-                  JOIN user_movies um ON m.imdb_id = um.movie_imdb_id
-                  WHERE um.user_id = ?`,
-            args: [userId],
+                  JOIN user_movies um ON m.imdb_id = um.movie_imdb_id`
         });
 
         const customListsPromise = client.execute({
+             // REMOVED: WHERE clause
              sql: `SELECT cl.id as list_id, cl.name as list_name, m.*, cml.date_added
                    FROM custom_lists cl
                    LEFT JOIN custom_movie_lists cml ON cl.id = cml.list_id
-                   LEFT JOIN movies m ON cml.movie_imdb_id = m.imdb_id
-                   WHERE cl.user_id = ?`,
-            args: [userId]
+                   LEFT JOIN movies m ON cml.movie_imdb_id = m.imdb_id`
         });
 
-        // Corrected this line to fetch both promise types
         const [standardListsResult, customListsResult] = await Promise.all([standardListsPromise, customListsPromise]);
         
         return res.status(200).json({ 
