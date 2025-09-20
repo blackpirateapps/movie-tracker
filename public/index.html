@@ -33,7 +33,26 @@
         .page { display: none; }
         .page.active { display: block; }
         
-        /* New Profile Header */
+        /* Skeleton Loader Styles */
+        .skeleton {
+            opacity: .7;
+            animation: shimmer 2s linear infinite;
+            background: linear-gradient(to right, #eff1f3 4%, #e2e2e2 25%, #eff1f3 36%);
+            background-size: 1000px 100%;
+        }
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        .skeleton-text { height: 1em; border-radius: 4px; }
+        .skeleton-avatar { width: 80px; height: 80px; border-radius: 50%; }
+        .skeleton-poster { width: 150px; height: 225px; border-radius: 8px; flex-shrink: 0; }
+
+        /* Hide skeletons when data is loaded */
+        .loaded .skeleton { display: none; }
+        .loaded .data-content { visibility: visible; }
+        .data-content { visibility: hidden; }
+        
         .profile-header {
             position: relative;
             height: 400px;
@@ -46,6 +65,7 @@
         .cover-image {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333;
             background-size: cover;
             background-position: center 20%;
             z-index: 1;
@@ -79,125 +99,58 @@
             border-radius: 50%;
             border: 3px solid white;
         }
-        .profile-details h1 {
-            font-size: 2rem;
-            font-weight: 700;
-        }
-        .profile-bio {
-            font-size: 0.9rem;
-            max-width: 60ch;
-            margin-top: 0.5rem;
-            color: #d1d1d6;
-        }
-        .profile-stats {
-            display: flex;
-            gap: 1.5rem;
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
-        }
-        .profile-stats strong {
-            font-weight: 600;
-            color: white;
-        }
-        .social-links {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        .social-links a {
-            color: #d1d1d6;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.2s;
-        }
+        .profile-details h1 { font-size: 2rem; font-weight: 700; }
+        .profile-bio { font-size: 0.9rem; max-width: 60ch; margin-top: 0.5rem; color: #d1d1d6; }
+        .profile-stats { display: flex; gap: 1.5rem; margin-top: 0.5rem; font-size: 0.9rem; }
+        .profile-stats strong { font-weight: 600; color: white; }
+        .social-links { display: flex; gap: 1rem; margin-top: 1rem; }
+        .social-links a { color: #d1d1d6; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
         .social-links a:hover { color: white; }
         
-        /* Main Navigation */
-        .main-nav {
-            padding: 1rem 0;
-            border-bottom: 1px solid var(--border-color);
-        }
+        .main-nav { padding: 1rem 0; border-bottom: 1px solid var(--border-color); }
         .main-nav .container { display: flex; justify-content: space-between; align-items: center; }
         .nav-logo { font-weight: bold; font-size: 1.2rem; cursor: pointer; }
         .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            margin-left: 1.5rem;
-            transition: color 0.2s;
+            color: var(--text-secondary); text-decoration: none; font-weight: 500;
+            margin-left: 1.5rem; transition: color 0.2s;
         }
         .nav-links a:hover, .nav-links a.active { color: var(--text-primary); }
 
-        /* Horizontally Scrolling Lists */
         .movie-row { margin-bottom: 3rem; }
         .row-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.5rem;
+            display: flex; justify-content: space-between; align-items: baseline;
+            margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;
         }
         .row-header h2 { font-size: 1.25rem; font-weight: 600; }
-        .show-all-btn {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-        }
+        .show-all-btn { font-size: 0.9rem; color: var(--text-secondary); text-decoration: none; font-weight: 500; }
         .show-all-btn:hover { color: var(--text-primary); }
         .row-content {
-            display: flex;
-            gap: 1rem;
-            overflow-x: auto;
-            padding-bottom: 1.5rem; /* For scrollbar */
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1.5rem;
+            -ms-overflow-style: none; scrollbar-width: none;
         }
-        .row-content::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
+        .row-content::-webkit-scrollbar { display: none; }
         
         .poster-card {
-            flex-shrink: 0;
-            width: 150px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
+            flex-shrink: 0; width: 150px; height: 225px; border-radius: 8px;
+            overflow: hidden; border: 1px solid var(--border-color);
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        .poster-card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-        }
-        .poster-card img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        /* Generic styles for full list pages */
+        .poster-card:hover { transform: scale(1.05); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+        .poster-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        
         .list-container { display: flex; flex-direction: column; gap: 0.75rem; }
         .movie-item {
-            background-color: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
         }
         .movie-info { flex-grow: 1; }
         .movie-title { font-weight: 500; color: var(--text-primary); }
         .movie-meta { color: var(--text-secondary); font-size: 0.85rem; }
         .movie-actions { display: flex; align-items: center; gap: 1rem; }
-        .action-btn {
-            background: none; border: none; color: var(--text-secondary);
-            font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: color 0.2s ease;
-        }
+        .action-btn { background: none; border: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: color 0.2s ease; }
         .action-btn:hover { color: var(--text-primary); }
         .action-btn.toggled-on { color: var(--accent-primary); }
         
-        /* Modal Styles */
         .modal {
             position: fixed; inset: 0; z-index: 100;
             display: flex; align-items: center; justify-content: center;
@@ -212,22 +165,10 @@
         }
         .modal.show .modal-content { transform: scale(1); }
         .empty-state { text-align: center; color: var(--text-secondary); padding: 3rem 0; }
-        .search-input {
-            width: 100%; border: 1px solid var(--border-color); background: var(--bg-secondary);
-            padding: 0.8rem 1.2rem; font-size: 1rem; color: var(--text-primary);
-            border-radius: 8px; transition: all 0.2s ease;
-        }
-        .search-input:focus {
-            outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
-        }
-        .button {
-            background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 0.5rem 1rem;
-            font-size: 0.9rem; font-weight: 500; color: var(--text-primary); cursor: pointer;
-            border-radius: 8px; transition: all 0.2s ease;
-        }
-        .button.primary {
-            background: var(--accent-primary); color: #ffffff; border-color: var(--accent-primary);
-        }
+        .search-input { width: 100%; border: 1px solid var(--border-color); background: var(--bg-secondary); padding: 0.8rem 1.2rem; font-size: 1rem; color: var(--text-primary); border-radius: 8px; transition: all 0.2s ease; }
+        .search-input:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2); }
+        .button { background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 500; color: var(--text-primary); cursor: pointer; border-radius: 8px; transition: all 0.2s ease; }
+        .button.primary { background: var(--accent-primary); color: #ffffff; border-color: var(--accent-primary); }
     </style>
 </head>
 <body>
@@ -248,15 +189,23 @@
             <div id="cover-image" class="cover-image"></div>
             <div class="profile-content container">
                 <div class="profile-info">
-                    <div class="profile-avatar">BP</div>
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="profile-avatar data-content">BP</div>
                     <div class="profile-details">
-                        <h1>BlackPirateX</h1>
+                        <div class="skeleton skeleton-text" style="width: 200px; height: 2rem; margin-bottom: 0.5rem;"></div>
+                        <h1 class="data-content">BlackPirateX</h1>
+
                         <div class="profile-stats">
-                            <div><strong id="stat-films">0</strong> FILMS</div>
-                            <div><strong id="stat-watchlist">0</strong> IN WATCHLIST</div>
+                            <div class="skeleton skeleton-text" style="width: 100px;"></div>
+                            <div class="skeleton skeleton-text" style="width: 120px;"></div>
+                            <div class="data-content">
+                                <div><strong id="stat-films">0</strong> FILMS</div>
+                                <div><strong id="stat-watchlist">0</strong> IN WATCHLIST</div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <!-- Bio and Social links don't need skeletons as they are static -->
                 <p class="profile-bio">Just a movie enthusiast tracking my cinematic journey. <br>Opinions are my own.</p>
                 <div class="social-links">
                     <a href="#" target="_blank">Twitter</a>
@@ -268,66 +217,34 @@
 
         <main class="container">
             <section id="profile-watched" class="movie-row">
-                <div class="row-header">
-                    <h2>Watched</h2>
-                    <a href="#" class="show-all-btn" data-page="watched">Show All</a>
+                <div class="row-header"><h2>Watched</h2><a href="#" class="show-all-btn" data-page="watched">Show All</a></div>
+                <div class="row-content">
+                    <div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div>
                 </div>
-                <div class="row-content"></div>
             </section>
-            
             <section id="profile-watchlist" class="movie-row">
-                <div class="row-header">
-                    <h2>Watchlist</h2>
-                    <a href="#" class="show-all-btn" data-page="watchlist">Show All</a>
+                <div class="row-header"><h2>Watchlist</h2><a href="#" class="show-all-btn" data-page="watchlist">Show All</a></div>
+                <div class="row-content">
+                    <div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div>
                 </div>
-                <div class="row-content"></div>
             </section>
-
             <section id="profile-favourites" class="movie-row">
-                <div class="row-header">
-                    <h2>Favourites</h2>
-                    <a href="#" class="show-all-btn" data-page="favourites">Show All</a>
+                <div class="row-header"><h2>Favourites</h2><a href="#" class="show-all-btn" data-page="favourites">Show All</a></div>
+                <div class="row-content">
+                     <div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div>
                 </div>
-                <div class="row-content"></div>
             </section>
         </main>
     </div>
+    
+    <!-- Other pages -->
+    <div id="search" class="page container"></div>
+    <div id="watchlist" class="page container"></div>
+    <div id="watched" class="page container"></div>
+    <div id="favourites" class="page container"></div>
+    <div id="custom-lists" class="page container"></div>
 
-    <!-- The full-page views are now hidden by default -->
-    <div id="search" class="page container">
-        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Search Movies</h2>
-        <div class="search-container">
-            <form id="search-form">
-                <input type="text" id="search-input" placeholder="Search for a movie..." class="search-input">
-            </form>
-        </div>
-        <div id="search-results" class="list-container"></div>
-    </div>
-    
-    <div id="watchlist" class="page container">
-        <div class="section-header"><h2 style="font-size: 1.5rem;">My Watchlist</h2></div>
-        <div id="watchlist-content" class="list-container"></div>
-    </div>
-    
-    <div id="watched" class="page container">
-        <div class="section-header"><h2 style="font-size: 1.5rem;">Watched Movies</h2></div>
-        <div id="watched-content" class="list-container"></div>
-    </div>
-    
-    <div id="favourites" class="page container">
-        <div class="section-header"><h2 style="font-size: 1.5rem;">Favourite Movies</h2></div>
-        <div id="favourites-content" class="list-container"></div>
-    </div>
-    
-    <div id="custom-lists" class="page container">
-        <div class="section-header">
-            <h2 style="font-size: 1.5rem;">Custom Lists</h2>
-            <button id="create-new-list-btn" class="button primary">+ New List</button>
-        </div>
-        <div id="custom-lists-content"></div>
-    </div>
-
-    <!-- Modals (unchanged) -->
+    <!-- Modals (structure unchanged, but they exist here) -->
     <div id="api-key-modal" class="modal">...</div>
     <div id="password-modal" class="modal">...</div>
     <div id="add-to-list-modal" class="modal">...</div>
