@@ -34,7 +34,7 @@ export default async function handler(req, res) {
             args: [userId]
         });
 
-        // FIX: Correctly awaiting both promises
+        // Corrected this line to fetch both promise types
         const [standardListsResult, customListsResult] = await Promise.all([standardListsPromise, customListsPromise]);
         
         return res.status(200).json({ 
