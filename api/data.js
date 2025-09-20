@@ -34,7 +34,8 @@ export default async function handler(req, res) {
             args: [userId]
         });
 
-        const [standardListsResult, customListsResult] = await Promise.all([standardListsPromise, standardListsPromise]);
+        // FIX: Correctly awaiting both promises
+        const [standardListsResult, customListsResult] = await Promise.all([standardListsPromise, customListsPromise]);
         
         return res.status(200).json({ 
             standardLists: standardListsResult.rows, 
