@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordForm: document.getElementById('password-form'),
         passwordInput: document.getElementById('password-input'),
         cancelPasswordBtn: document.getElementById('cancel-password'),
-        closeApiKeyModalBtn: document.getElementById('close-api-key-modal'),
+        addToListModal: document.getElementById('add-to-list-modal'),
+        customListOptions: document.getElementById('custom-list-options'),
+        cancelAddToListBtn: document.getElementById('cancel-add-to-list'),
     };
 
     // --- STATE MANAGEMENT ---
@@ -27,15 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
         userId: getCookie('movieTrackerUserId') || setUserIdCookie(),
         adminPassword: getCookie('movieTrackerAdminPassword'),
         omdbApiKey: localStorage.getItem('omdbApiKey'),
-        watchlist: [],
-        watched: [],
-        favourites: [],
-        customLists: [],
-        currentSearch: [],
+        watchlist: [], watched: [], favourites: [], customLists: [], currentSearch: [],
         pendingAction: null,
+        movieToAddToList: null,
     };
 
-    // --- COOKIE HELPERS ---
+    // --- HELPERS ---
     function setCookie(name, value, days) {
         let expires = "";
         if (days) {
@@ -49,10 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function getCookie(name) {
         const nameEQ = name + "=";
         const ca = document.cookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+        for (let c of ca) {
+            c = c.trim();
+            if (c.startsWith(nameEQ)) return c.substring(nameEQ.length, c.length);
         }
         return null;
     }
@@ -66,24 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- MODAL MANAGEMENT ---
     function toggleModal(modal, show) {
         if (!modal) return;
-        if (show) {
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modal.querySelector('.modal-content')?.classList.remove('scale-95');
-            }, 10);
-        } else {
-            modal.classList.add('opacity-0');
-            modal.querySelector('.modal-content')?.classList.add('scale-95');
-            setTimeout(() => modal.classList.add('hidden'), 300);
-        }
+        modal.classList.toggle('show', show);
     }
 
     // --- API COMMUNICATION ---
     async function apiRequest(method, body) {
         if (method !== 'GET' && !state.adminPassword) {
-            toggleModal(G.passwordModal, true);
             state.pendingAction = () => apiRequest(method, body);
+            toggleModal(G.passwordModal, true);
             return;
         }
 
@@ -95,36 +83,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = method === 'GET' ? `/api/movies?userId=${state.userId}` : '/api/movies';
         
         try {
-            const response = await fetch(url, {
-                method,
-                headers,
-                body: body ? JSON.stringify(body) : null,
-            });
-
+            const response = await fetch(url, { method, headers, body: JSON.stringify(body) });
             if (!response.ok) {
-                const errorText = await response.text();
                 if (response.status === 401) {
-                    state.adminPassword = null;
-                    setCookie('movieTrackerAdminPassword', '', -1);
-                    toggleModal(G.passwordModal, true);
+                    state.adminPassword = null; setCookie('movieTrackerAdminPassword', '', -1);
                     state.pendingAction = () => apiRequest(method, body);
-                    return; 
+                    toggleModal(G.passwordModal, true);
+                    return;
                 }
-                throw new Error(`Server responded with ${response.status}: ${errorText}`);
+                throw new Error(`Server Error: ${response.status}`);
             }
-
-            if (method !== 'GET') return { success: true };
-            const data = await response.json();
-            return data;
-
+            return method === 'GET' ? response.json() : { success: true };
         } catch (error) {
             console.error(`API Error (${method}):`, error);
-            console.error("Failed to process API request. See console for details.");
-            return method === 'GET' ? { standardLists: [], customLists: [] } : null;
+            return null;
         }
     }
 
-
+    // --- DATA FETCHING & RENDERING ---
     async function fetchUserLists() {
         const data = await apiRequest('GET');
         if (!data) return;
@@ -139,101 +115,75 @@ document.addEventListener('DOMContentLoaded', () => {
                 customListMap.set(item.list_id, { id: item.list_id, name: item.list_name, movies: [] });
             }
             if (item.imdb_id) {
-                 const movieData = {
-                    imdb_id: item.imdb_id, title: item.title, year: item.year, runtime: item.runtime, director: item.director, actors: item.actors, genre: item.genre, poster_url: item.poster_url, dateAdded: item.date_added
-                };
+                 const movieData = { imdb_id: item.imdb_id, title: item.title, year: item.year, poster_url: item.poster_url };
                 customListMap.get(item.list_id).movies.push(movieData);
             }
         });
         state.customLists = Array.from(customListMap.values());
-        
         renderAll();
     }
 
     async function searchOMDB(query) {
-         if (!state.omdbApiKey) {
-            toggleModal(G.apiKeyModal, true);
-            return;
-        }
-        G.searchResults.innerHTML = `<p class="col-span-full text-center text-[var(--text-secondary)]">Searching...</p>`;
+         if (!state.omdbApiKey) { toggleModal(G.apiKeyModal, true); return; }
+        G.searchResults.innerHTML = `<p class="empty-state">Searching...</p>`;
         try {
             const response = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(query)}&apikey=${state.omdbApiKey}`);
             const data = await response.json();
-            if (data.Response === "True") {
-                state.currentSearch = data.Search.map(m => ({ imdb_id: m.imdbID, title: m.Title, year: m.Year, poster_url: m.Poster }));
-                renderSearchResults();
-            } else {
-                G.searchResults.innerHTML = `<p class="col-span-full text-center text-[var(--text-secondary)]">${data.Error}</p>`;
-            }
-        } catch(e) {
-            G.searchResults.innerHTML = `<p class="col-span-full text-center text-red-500">Failed to fetch from OMDb.</p>`;
-        }
+            state.currentSearch = data.Response === "True" ? data.Search.map(m => ({ imdb_id: m.imdbID, title: m.Title, year: m.Year, poster_url: m.Poster })) : [];
+            renderSearchResults();
+        } catch(e) { G.searchResults.innerHTML = `<p class="empty-state">Failed to fetch from OMDb.</p>`; }
     }
 
-
-    // --- RENDERING ---
-    function createMovieCard(movie, isSearch = false) {
+    function createMovieCard(movie) {
         const isWatched = state.watched.some(m => m.imdb_id === movie.imdb_id);
         const isWatchlist = state.watchlist.some(m => m.imdb_id === movie.imdb_id);
         const isFavourite = state.favourites.some(m => m.imdb_id === movie.imdb_id);
         
         return `
-            <div class="movie-card bg-[var(--card-bg)] rounded-xl shadow-md overflow-hidden flex flex-col border border-[var(--border-color)]">
-                <img src="${movie.poster_url !== 'N/A' ? movie.poster_url : 'https://placehold.co/400x600/27272A/A1A1AA?text=No+Image'}" alt="${movie.title}" class="w-full h-auto object-cover aspect-[2/3] bg-zinc-700" loading="lazy">
-                <div class="p-3 flex-grow flex flex-col">
-                    <h3 class="font-bold text-sm text-[var(--text-primary)] flex-grow">${movie.title}</h3>
-                    <p class="text-xs text-[var(--text-secondary)] mb-3">${movie.year}</p>
-                    <div class="grid grid-cols-4 gap-2">
-                        <button title="Add to Watchlist" data-id="${movie.imdb_id}" class="action-btn toggle-watchlist-btn ${isWatchlist ? 'toggled-on' : ''} flex items-center justify-center h-9 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+            <div class="movie-card" data-id="${movie.imdb_id}">
+                <img src="${movie.poster_url !== 'N/A' ? movie.poster_url : 'https://placehold.co/400x600/2A2A2A/A0A0A0?text=No+Image'}" alt="${movie.title}" loading="lazy">
+                <div class="movie-card-content">
+                    <h3 class="movie-title">${movie.title}</h3>
+                    <p class="movie-meta">${movie.year}</p>
+                    <div class="movie-actions">
+                        <button title="Toggle Watchlist" class="action-btn toggle-watchlist-btn ${isWatchlist ? 'toggled-on' : ''}">
+                            <svg class="pointer-events-none" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
                         </button>
-                        <button title="Mark as Watched" data-id="${movie.imdb_id}" class="action-btn add-to-watched-btn ${isWatched ? 'toggled-on' : ''} flex items-center justify-center h-9 rounded-lg">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        <button title="Toggle Watched" class="action-btn add-to-watched-btn ${isWatched ? 'toggled-on' : ''}">
+                             <svg class="pointer-events-none" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7s-8.268-2.943-9.542-7z"/></svg>
                         </button>
-                        <button title="Add to Favourites" data-id="${movie.imdb_id}" class="action-btn toggle-favourite-btn ${isFavourite ? 'toggled-on' : ''} flex items-center justify-center h-9 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                        <button title="Toggle Favourite" class="action-btn toggle-favourite-btn ${isFavourite ? 'toggled-on' : ''}">
+                            <svg class="pointer-events-none" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                         </button>
-                         <button title="Add to Custom List" data-id="${movie.imdb_id}" class="action-btn add-to-list-btn flex items-center justify-center h-9 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                         <button title="Add to Custom List" class="action-btn add-to-list-btn">
+                            <svg class="pointer-events-none" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
                         </button>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 
-    const renderEmptyState = (text) => `<div class="col-span-full text-center text-[var(--text-secondary)] py-16">${text}</div>`;
-    const createGrid = (movies, isSearch = false) => movies.length > 0 ? movies.map(m => createMovieCard(m, isSearch)).join('') : '';
+    const renderEmptyState = (text) => `<div class="empty-state">${text}</div>`;
+    const createGrid = (movies) => movies.length > 0 ? movies.map(createMovieCard).join('') : '';
 
-    function renderSearchResults() { 
-        const content = createGrid(state.currentSearch, true);
-        G.searchResults.innerHTML = content || renderEmptyState('No results found.');
-    }
-    function renderWatchlist() {
-        const content = createGrid(state.watchlist);
-        G.watchlistContent.innerHTML = content || renderEmptyState('Your watchlist is empty.');
-    }
-    function renderWatched() { 
-        const content = createGrid(state.watched);
-        G.watchedContent.innerHTML = content || renderEmptyState('You haven\'t marked any movies as watched.');
-    }
-    function renderFavourites() { 
-        const content = createGrid(state.favourites);
-        G.favouritesContent.innerHTML = content || renderEmptyState('You have no favourite movies yet.');
-     }
+    const renderPage = (contentEl, movies, emptyText) => {
+        contentEl.innerHTML = movies.length > 0 ? createGrid(movies) : renderEmptyState(emptyText);
+    };
+
+    function renderSearchResults() { renderPage(G.searchResults, state.currentSearch, 'Search for a movie to get started.'); }
+    function renderWatchlist() { renderPage(G.watchlistContent, state.watchlist, 'Your watchlist is empty.'); }
+    function renderWatched() { renderPage(G.watchedContent, state.watched, 'You haven\'t marked any movies as watched.'); }
+    function renderFavourites() { renderPage(G.favouritesContent, state.favourites, 'You have no favourite movies yet.'); }
     function renderCustomLists() {
         if (state.customLists.length === 0) {
             G.customListsContent.innerHTML = renderEmptyState("You haven't created any custom lists.");
             return;
         }
-        
         G.customListsContent.innerHTML = state.customLists.map(list => `
-            <div class="bg-[var(--card-bg)] p-4 rounded-xl shadow-sm border border-[var(--border-color)] mb-8">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-[var(--text-primary)]">${list.name}</h2>
-                    <button data-id="${list.id}" class="delete-list-btn text-[var(--text-secondary)] hover:text-red-500 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                    </button>
+            <div class="custom-list-section" data-id="${list.id}">
+                <div class="section-header">
+                    <h2 class="section-title">${list.name}</h2>
+                    <button class="button delete-list-btn">Delete List</button>
                 </div>
                 <div class="grid-container">
                     ${createGrid(list.movies) || renderEmptyState('This list is empty.')}
@@ -242,10 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderAll() {
-        renderWatchlist();
-        renderWatched();
-        renderFavourites();
-        renderCustomLists();
+        renderWatchlist(); renderWatched(); renderFavourites(); renderCustomLists();
     }
     
     // --- EVENT LISTENERS & ACTIONS ---
@@ -267,47 +214,64 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.body.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.action-btn');
-        if (!btn) return;
+        const actionBtn = e.target.closest('.action-btn');
+        if (actionBtn) {
+            const card = actionBtn.closest('.movie-card');
+            const imdbId = card.dataset.id;
+            const allMovies = [...state.currentSearch, ...state.watchlist, ...state.watched, ...state.favourites];
+            const movieData = allMovies.find(m => m.imdb_id === imdbId);
 
-        const imdbId = btn.dataset.id;
-        if (!imdbId) return;
-
-        const movieData = state.currentSearch.find(m => m.imdb_id === imdbId) || 
-                          state.watchlist.find(m => m.imdb_id === imdbId) ||
-                          state.watched.find(m => m.imdb_id === imdbId) ||
-                          state.favourites.find(m => m.imdb_id === imdbId);
-
-        let listType = '';
-        if (btn.classList.contains('toggle-watchlist-btn')) listType = 'watchlist';
-        else if (btn.classList.contains('add-to-watched-btn')) listType = 'watched';
-        else if (btn.classList.contains('toggle-favourite-btn')) listType = 'favourites';
-        else if (btn.classList.contains('add-to-list-btn')) {
-            // Future logic for custom lists
-            console.log("Add to custom list clicked for:", imdbId);
-            return;
-        }
-
-        const result = await apiRequest('POST', { 
-            userId: state.userId, 
-            listType: listType,
-            movie: {
-                imdb_id: imdbId,
-                title: movieData?.title,
-                year: movieData?.year,
-                poster_url: movieData?.poster_url,
+            if (actionBtn.classList.contains('add-to-list-btn')) {
+                state.movieToAddToList = movieData;
+                G.customListOptions.innerHTML = state.customLists.map(l => `<button class="button w-full custom-list-choice" data-id="${l.id}">${l.name}</button>`).join('') || '<p class="text-center text-sm text-[var(--text-secondary)]">No custom lists yet.</p>';
+                toggleModal(G.addToListModal, true);
+                return;
             }
-        });
+
+            const listType = actionBtn.classList.contains('toggle-watchlist-btn') ? 'watchlist'
+                           : actionBtn.classList.contains('add-to-watched-btn') ? 'watched'
+                           : actionBtn.classList.contains('toggle-favourite-btn') ? 'favourites' : '';
+            
+            if (listType && movieData) {
+                const result = await apiRequest('POST', { action: 'TOGGLE_STANDARD_LIST', userId: state.userId, listType, movie: movieData });
+                if (result) {
+                    await fetchUserLists();
+                    if (document.getElementById('search').classList.contains('active')) renderSearchResults();
+                }
+            }
+        }
         
-        if (result) {
-            await fetchUserLists();
-            if (document.getElementById('search').classList.contains('active')) {
-                renderSearchResults();
+        const deleteBtn = e.target.closest('.delete-list-btn');
+        if (deleteBtn) {
+            const listId = deleteBtn.closest('.custom-list-section').dataset.id;
+            if (confirm('Are you sure you want to delete this entire list?')) {
+                 const result = await apiRequest('POST', { action: 'DELETE_LIST', userId: state.userId, listId });
+                 if (result) await fetchUserLists();
+            }
+        }
+    });
+    
+    G.customListOptions.addEventListener('click', async (e) => {
+        const choiceBtn = e.target.closest('.custom-list-choice');
+        if (choiceBtn && state.movieToAddToList) {
+            const listId = choiceBtn.dataset.id;
+            const result = await apiRequest('POST', { action: 'ADD_TO_CUSTOM_LIST', userId: state.userId, listId, movie: state.movieToAddToList });
+            if (result) {
+                await fetchUserLists();
+                toggleModal(G.addToListModal, false);
+                state.movieToAddToList = null;
             }
         }
     });
 
-    // MODIFIED: Logic moved from here to the new init flow
+    G.createNewListBtn.addEventListener('click', async () => {
+        const name = prompt('Enter a name for your new list:');
+        if (name && name.trim()) {
+            const result = await apiRequest('POST', { action: 'CREATE_LIST', userId: state.userId, name: name.trim() });
+            if (result) await fetchUserLists();
+        }
+    });
+
     G.apiKeyForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const key = G.apiKeyInput.value.trim();
@@ -319,8 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    G.closeApiKeyModalBtn.addEventListener('click', () => toggleModal(G.apiKeyModal, false));
-
     G.passwordForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const pass = G.passwordInput.value.trim();
@@ -336,17 +298,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    G.cancelPasswordBtn.addEventListener('click', () => {
-        state.pendingAction = null;
-        toggleModal(G.passwordModal, false);
-    });
+    G.cancelPasswordBtn.addEventListener('click', () => { state.pendingAction = null; toggleModal(G.passwordModal, false); });
+    G.cancelAddToListBtn.addEventListener('click', () => { toggleModal(G.addToListModal, false); });
 
-    // --- INITIALIZATION (REFACTORED) ---
     async function finishInitialization() {
-        document.getElementById('watchlist').classList.add('active');
-        document.querySelector('.nav-item[data-page="watchlist"]').classList.add('active');
         await fetchUserLists();
-        G.searchResults.innerHTML = renderEmptyState('Search for a movie to get started.');
+        renderSearchResults();
     }
 
     async function init() {

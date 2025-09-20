@@ -2,164 +2,153 @@ import { createClient } from '@libsql/client';
 import { put } from '@vercel/blob';
 import sharp from 'sharp';
 
-// --- DATABASE CLIENT SETUP ---
-const db = createClient({
+const client = createClient({
     url: process.env.TURSO_DATABASE_URL,
     authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-// --- HELPER FUNCTIONS ---
-const getFullMovieData = async (imdbId) => {
-    // Note: Use an environment variable for the OMDB API key
-    const response = await fetch(`http://www.omdbapi.com/?i=${imdbId}&apikey=${process.env.OMDB_API_KEY}`);
-    const data = await response.json();
-    if (data.Response === "False") throw new Error('Failed to fetch from OMDb.');
+async function getMovieDetails(imdbID, omdbApiKey) {
+    const res = await fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=${omdbApiKey}`);
+    const data = await res.json();
+    if (data.Response === "False") throw new Error('Failed to fetch movie details from OMDb.');
     return {
+        title: data.Title,
+        year: data.Year,
         runtime: data.Runtime,
         director: data.Director,
         actors: data.Actors,
         genre: data.Genre,
+        poster_url: data.Poster,
     };
-};
+}
 
-const compressAndUploadImage = async (imageUrl, imdbId) => {
-    if (!imageUrl || imageUrl === 'N/A') return null;
+async function processAndStoreImage(posterUrl, imdbID) {
+    if (!posterUrl || posterUrl === 'N/A') return posterUrl;
     try {
-        const imageResponse = await fetch(imageUrl);
-        if (!imageResponse.ok) return null;
-
-        const imageBuffer = await imageResponse.arrayBuffer();
-        const compressedImageBuffer = await sharp(Buffer.from(imageBuffer))
-            .resize({ width: 400 })
-            .jpeg({ quality: 75 })
-            .toBuffer();
-
-        const blob = await put(`${imdbId}.jpg`, compressedImageBuffer, {
+        const response = await fetch(posterUrl);
+        if (!response.ok) return posterUrl;
+        const buffer = await response.arrayBuffer();
+        const compressedImageBuffer = await sharp(Buffer.from(buffer)).jpeg({ quality: 60 }).toBuffer();
+        
+        const blob = await put(`posters/${imdbID}.jpg`, compressedImageBuffer, {
             access: 'public',
-            token: process.env.BLOB_READ_WRITE_TOKEN,
+            contentType: 'image/jpeg',
         });
-
         return blob.url;
     } catch (error) {
-        console.error("Image processing failed:", error);
-        return imageUrl; // Fallback to original URL
+        console.error("Image processing error:", error);
+        return posterUrl;
     }
-};
+}
 
-// --- MAIN API HANDLER ---
-// MODIFIED: Wrapped the entire handler in a try...catch block for robust error handling.
 export default async function handler(req, res) {
     try {
         if (req.method === 'GET') {
-            await handleGet(req, res);
+            const { userId } = req.query;
+            if (!userId) return res.status(400).json({ error: 'User ID is required' });
+
+            const standardListsPromise = client.execute({
+                sql: `SELECT m.*, um.list_type, um.user_rating, um.date_added
+                      FROM movies m
+                      JOIN user_movies um ON m.imdb_id = um.movie_imdb_id
+                      WHERE um.user_id = ?`,
+                args: [userId],
+            });
+
+            const customListsPromise = client.execute({
+                 sql: `SELECT cl.id as list_id, cl.name as list_name, m.*, cml.date_added
+                       FROM custom_lists cl
+                       LEFT JOIN custom_movie_lists cml ON cl.id = cml.list_id
+                       LEFT JOIN movies m ON cml.movie_imdb_id = m.imdb_id
+                       WHERE cl.user_id = ?`,
+                args: [userId]
+            });
+
+            const [standardListsResult, customListsResult] = await Promise.all([standardListsPromise, customListsPromise]);
+            
+            return res.status(200).json({ 
+                standardLists: standardListsResult.rows, 
+                customLists: customListsResult.rows 
+            });
+
         } else if (req.method === 'POST') {
-            await handlePost(req, res);
+            if (req.headers['x-admin-password'] !== process.env.ADMIN_PASSWORD) {
+                return res.status(401).json({ error: 'Unauthorized: Invalid admin password' });
+            }
+
+            const { action, userId, movie, listType, listId, name } = req.body;
+
+            switch (action) {
+                case 'TOGGLE_STANDARD_LIST': {
+                    const { imdb_id, title, year, poster_url } = movie;
+                    
+                    const existingMovie = await client.execute({ sql: 'SELECT * FROM movies WHERE imdb_id = ?', args: [imdb_id] });
+                    if (existingMovie.rows.length === 0) {
+                        const details = await getMovieDetails(imdb_id, process.env.OMDB_API_KEY);
+                        const finalPosterUrl = await processAndStoreImage(details.poster_url, imdb_id);
+                        await client.execute({
+                            sql: 'INSERT INTO movies (imdb_id, title, year, runtime, director, actors, genre, poster_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                            args: [imdb_id, details.title, details.year, details.runtime, details.director, details.actors, details.genre, finalPosterUrl],
+                        });
+                    }
+
+                    const existingLink = await client.execute({ sql: 'SELECT * FROM user_movies WHERE user_id = ? AND movie_imdb_id = ? AND list_type = ?', args: [userId, imdb_id, listType] });
+
+                    if (existingLink.rows.length > 0) {
+                        await client.execute({ sql: 'DELETE FROM user_movies WHERE user_id = ? AND movie_imdb_id = ? AND list_type = ?', args: [userId, imdb_id, listType] });
+                    } else {
+                        await client.execute({ sql: 'INSERT INTO user_movies (user_id, movie_imdb_id, list_type, date_added) VALUES (?, ?, ?, ?)', args: [userId, imdb_id, listType, new Date().toISOString()] });
+                    }
+                    return res.status(200).json({ success: true });
+                }
+                
+                case 'CREATE_LIST': {
+                    const newListId = crypto.randomUUID();
+                    await client.execute({
+                        sql: 'INSERT INTO custom_lists (id, user_id, name, date_created) VALUES (?, ?, ?, ?)',
+                        args: [newListId, userId, name, new Date().toISOString()]
+                    });
+                     return res.status(200).json({ success: true, id: newListId });
+                }
+
+                case 'DELETE_LIST': {
+                    await client.execute({
+                        sql: 'DELETE FROM custom_lists WHERE id = ? AND user_id = ?',
+                        args: [listId, userId]
+                    });
+                    return res.status(200).json({ success: true });
+                }
+
+                case 'ADD_TO_CUSTOM_LIST': {
+                     const { imdb_id } = movie;
+                     const existingMovie = await client.execute({ sql: 'SELECT * FROM movies WHERE imdb_id = ?', args: [imdb_id] });
+                     if (existingMovie.rows.length === 0) {
+                        const details = await getMovieDetails(imdb_id, process.env.OMDB_API_KEY);
+                        const finalPosterUrl = await processAndStoreImage(details.poster_url, imdb_id);
+                        await client.execute({
+                            sql: 'INSERT INTO movies (imdb_id, title, year, runtime, director, actors, genre, poster_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                            args: [imdb_id, details.title, details.year, details.runtime, details.director, details.actors, details.genre, finalPosterUrl],
+                        });
+                    }
+                    
+                    await client.execute({
+                        sql: 'INSERT OR IGNORE INTO custom_movie_lists (list_id, movie_imdb_id, date_added) VALUES (?, ?, ?)',
+                        args: [listId, imdb_id, new Date().toISOString()]
+                    });
+                     return res.status(200).json({ success: true });
+                }
+
+                default:
+                    return res.status(400).json({ error: 'Invalid action specified' });
+            }
+
         } else {
             res.setHeader('Allow', ['GET', 'POST']);
-            res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+            return res.status(405).end(`Method ${req.method} Not Allowed`);
         }
     } catch (error) {
-        console.error("Unhandled error in API handler:", error);
-        res.status(500).json({ error: "An internal server error occurred.", details: error.message });
+        console.error('API Error:', error);
+        return res.status(500).json({ error: 'An internal server error occurred', details: error.message });
     }
-}
-
-
-// --- GET REQUEST HANDLER ---
-async function handleGet(req, res) {
-    const { userId } = req.query;
-    if (!userId) {
-        return res.status(400).json({ error: "User ID is required." });
-    }
-
-    const standardListsPromise = db.execute({
-        sql: `SELECT m.*, um.list_type, um.user_rating, um.date_added
-              FROM user_movies um
-              JOIN movies m ON um.movie_imdb_id = m.imdb_id
-              WHERE um.user_id = ? AND um.list_type IN ('watchlist', 'watched', 'favourites')`,
-        args: [userId],
-    });
-
-    const customListsPromise = db.execute({
-        sql: `SELECT cl.id as list_id, cl.name as list_name, m.*, cml.date_added
-              FROM custom_lists cl
-              LEFT JOIN custom_movie_lists cml ON cl.id = cml.list_id
-              LEFT JOIN movies m ON cml.movie_imdb_id = m.imdb_id
-              WHERE cl.user_id = ?`,
-        args: [userId],
-    });
-
-    const [standardListsResult, customListsResult] = await Promise.all([standardListsPromise, customListsPromise]);
-
-    res.status(200).json({
-        standardLists: standardListsResult.rows,
-        customLists: customListsResult.rows,
-    });
-}
-
-
-// --- POST REQUEST HANDLER ---
-async function handlePost(req, res) {
-    // Password check
-    const adminPassword = req.headers['x-admin-password'];
-    if (adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid password.' });
-    }
-    
-    const { userId, listType, movie } = req.body;
-    if (!userId || !listType || !movie || !movie.imdb_id) {
-        return res.status(400).json({ error: 'Missing required fields.' });
-    }
-
-    // Check if movie exists, if not, create it
-    const existingMovie = await db.execute({
-        sql: "SELECT imdb_id, poster_url FROM movies WHERE imdb_id = ?",
-        args: [movie.imdb_id],
-    });
-
-    if (existingMovie.rows.length === 0) {
-        const fullData = await getFullMovieData(movie.imdb_id);
-        const blobUrl = await compressAndUploadImage(movie.poster_url, movie.imdb_id);
-        
-        await db.execute({
-            sql: `INSERT INTO movies (imdb_id, title, year, runtime, director, actors, genre, poster_url)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [
-                movie.imdb_id, movie.title, movie.year,
-                fullData.runtime, fullData.director, fullData.actors,
-                fullData.genre, blobUrl ?? movie.poster_url
-            ]
-        });
-    }
-
-    // Add/Remove movie from the specified list for the user
-    // This is a "toggle" logic. If it exists, remove it. If not, add it.
-    const existingEntry = await db.execute({
-        sql: "SELECT 1 FROM user_movies WHERE user_id = ? AND movie_imdb_id = ? AND list_type = ?",
-        args: [userId, movie.imdb_id, listType]
-    });
-
-    if (existingEntry.rows.length > 0) {
-        // Remove
-        await db.execute({
-            sql: "DELETE FROM user_movies WHERE user_id = ? AND movie_imdb_id = ? AND list_type = ?",
-            args: [userId, movie.imdb_id, listType]
-        });
-    } else {
-        // Add
-        // Special logic: adding to 'watched' removes from 'watchlist'
-        if (listType === 'watched') {
-             await db.execute({
-                sql: "DELETE FROM user_movies WHERE user_id = ? AND movie_imdb_id = ? AND list_type = 'watchlist'",
-                args: [userId, movie.imdb_id]
-            });
-        }
-        await db.execute({
-            sql: "INSERT INTO user_movies (user_id, movie_imdb_id, list_type, date_added) VALUES (?, ?, ?, ?)",
-            args: [userId, movie.imdb_id, listType, new Date().toISOString()]
-        });
-    }
-
-    res.status(200).json({ success: true, message: `Movie list '${listType}' updated.` });
 }
 

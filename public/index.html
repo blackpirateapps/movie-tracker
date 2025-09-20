@@ -4,155 +4,257 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Tracker</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #18181B; /* Zinc 900 */
-            --bg-secondary: #09090B; /* Zinc 950 */
-            --card-bg: #27272A; /* Zinc 800 */
-            --text-primary: #F4F4F5; /* Zinc 100 */
-            --text-secondary: #A1A1AA; /* Zinc 400 */
-            --accent-color: #3B82F6; /* Blue 500 */
-            --border-color: #3F3F46; /* Zinc 700 */
+            --bg-primary: #121212;
+            --bg-secondary: #1E1E1E;
+            --card-bg: #2A2A2A;
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0A0;
+            --accent-primary: #3B82F6;
+            --accent-secondary: #2563EB;
+            --border-color: #383838;
+            --danger-color: #EF4444;
         }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--bg-secondary);
+            background: var(--bg-primary);
             color: var(--text-primary);
+            line-height: 1.6;
         }
-        .nav-item {
-            transition: all 0.2s ease-in-out;
-            border-bottom: 2px solid transparent;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
         }
-        .nav-item.active, .nav-item:hover {
-            color: var(--text-primary);
-            background-color: var(--card-bg);
-        }
+        header { text-align: center; margin-bottom: 3rem; }
+        h1 { font-size: 2.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .subtitle { font-size: 1rem; color: var(--text-secondary); }
         .page { display: none; }
         .page.active { display: block; }
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 1rem;
+        .nav-controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2.5rem;
+            background: var(--bg-secondary);
+            padding: 0.5rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
         }
-        @media (min-width: 1024px) {
-            .grid-container {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            }
-        }
-        .action-btn {
-            background-color: rgba(63, 63, 70, 0.7); /* Zinc 700 with opacity */
+        .nav-item {
             color: var(--text-secondary);
-            transition: all 0.2s ease-in-out;
+            text-decoration: none;
+            cursor: pointer;
+            padding: 0.5rem 1.25rem;
+            border-radius: 999px;
+            transition: all 0.2s ease;
+            font-weight: 500;
         }
-        .action-btn:hover {
-            background-color: var(--border-color);
+        .nav-item.active, .nav-item:hover {
+            background-color: var(--card-bg);
             color: var(--text-primary);
         }
-        .action-btn.toggled-on {
-            background-color: var(--accent-color);
-            color: white;
+        .search-container { margin-bottom: 2rem; }
+        .search-input {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            padding: 0.8rem 1.2rem;
+            font-size: 1rem;
+            color: var(--text-primary);
+            border-radius: 999px;
+            transition: all 0.2s ease;
         }
-        .modal { transition: opacity 0.3s ease; }
-        .modal-content { transition: transform 0.3s ease; }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .section-title { font-size: 1.25rem; font-weight: 600; }
+        .button {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 999px;
+            transition: all 0.2s ease;
+        }
+        .button.primary {
+            background: var(--accent-primary);
+            color: #ffffff;
+            border-color: var(--accent-primary);
+        }
+        .button.primary:hover { background: var(--accent-secondary); }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        .movie-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .movie-card img {
+            width: 100%;
+            aspect-ratio: 2 / 3;
+            object-fit: cover;
+            background-color: var(--bg-secondary);
+        }
+        .movie-card-content { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; }
+        .movie-title { font-weight: 600; color: var(--text-primary); flex-grow: 1; }
+        .movie-meta { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem; }
+        .movie-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 1rem; }
+        .action-btn {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .action-btn:hover { background-color: var(--border-color); color: var(--text-primary); }
+        .action-btn.toggled-on { background-color: var(--accent-primary); color: white; border-color: var(--accent-primary); }
+        .modal {
+            position: fixed; inset: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            background-color: rgba(0,0,0,0.7);
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+        }
+        .modal.show { opacity: 1; visibility: visible; }
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--border-color);
+            transform: scale(0.95);
+            transition: all 0.3s ease;
+        }
+        .modal.show .modal-content { transform: scale(1); }
+        .custom-list-section {
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+        .empty-state { grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 3rem 0; }
     </style>
 </head>
-<body class="antialiased">
+<body>
 
-    <div id="app-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <header class="sticky top-0 z-40 bg-opacity-80 backdrop-blur-md bg-[var(--bg-secondary)] py-4">
-            <nav class="flex items-center justify-between">
-                <div class="text-xl font-bold">MovieDB</div>
-                <div class="flex items-center space-x-2 bg-[var(--bg-primary)] p-1 rounded-full border border-[var(--border-color)]">
-                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="search">Search</a>
-                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="watchlist">Watchlist</a>
-                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="watched">Watched</a>
-                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="favourites">Favourites</a>
-                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="custom-lists">Custom Lists</a>
-                </div>
-            </nav>
+    <div class="container">
+        <header>
+            <h1>Movie Tracker</h1>
+            <div class="subtitle">Your personal movie database</div>
         </header>
 
-        <main class="py-8">
+        <nav class="nav-controls">
+            <a class="nav-item active" data-page="search">Search</a>
+            <a class="nav-item" data-page="watchlist">Watchlist</a>
+            <a class="nav-item" data-page="watched">Watched</a>
+            <a class="nav-item" data-page="favourites">Favourites</a>
+            <a class="nav-item" data-page="custom-lists">Custom Lists</a>
+        </nav>
+
+        <main>
             <!-- Search Page -->
-            <div id="search" class="page">
-                <form id="search-form" class="mb-8">
-                    <input type="text" id="search-input" placeholder="Search for a movie..." class="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-full px-6 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:ring-2 focus:ring-[var(--accent-color)] focus:outline-none transition">
-                </form>
-                <div id="search-results" class="grid-container">
-                    <!-- Search results will be injected here -->
+            <div id="search" class="page active">
+                <div class="search-container">
+                    <form id="search-form">
+                        <input type="text" id="search-input" placeholder="Search for a movie..." class="search-input">
+                    </form>
                 </div>
+                <div id="search-results" class="grid-container"></div>
             </div>
 
             <!-- Watchlist Page -->
             <div id="watchlist" class="page">
-                <h1 class="text-3xl font-bold mb-6">My Watchlist</h1>
-                <div id="watchlist-content" class="grid-container">
-                    <!-- Watchlist movies will be injected here -->
-                </div>
+                <div class="section-header"><h2 class="section-title">My Watchlist</h2></div>
+                <div id="watchlist-content" class="grid-container"></div>
             </div>
 
             <!-- Watched Page -->
             <div id="watched" class="page">
-                 <h1 class="text-3xl font-bold mb-6">Watched Movies</h1>
-                <div id="watched-content" class="grid-container">
-                    <!-- Watched movies will be injected here -->
-                </div>
+                <div class="section-header"><h2 class="section-title">Watched Movies</h2></div>
+                <div id="watched-content" class="grid-container"></div>
             </div>
 
             <!-- Favourites Page -->
             <div id="favourites" class="page">
-                 <h1 class="text-3xl font-bold mb-6">Favourite Movies</h1>
-                <div id="favourites-content" class="grid-container">
-                    <!-- Favourite movies will be injected here -->
-                </div>
+                <div class="section-header"><h2 class="section-title">Favourite Movies</h2></div>
+                <div id="favourites-content" class="grid-container"></div>
             </div>
             
             <!-- Custom Lists Page -->
             <div id="custom-lists" class="page">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-bold">Custom Lists</h1>
-                    <button id="create-new-list-btn" class="bg-[var(--accent-color)] text-white font-semibold px-4 py-2 rounded-full text-sm">Create New List</button>
+                <div class="section-header">
+                    <h2 class="section-title">Custom Lists</h2>
+                    <button id="create-new-list-btn" class="button primary">+ New List</button>
                 </div>
-                <div id="custom-lists-content">
-                    <!-- Custom lists will be injected here -->
-                </div>
+                <div id="custom-lists-content"></div>
             </div>
         </main>
     </div>
 
-    <!-- MODIFIED: Increased z-index from z-50 to z-[100] for robustness -->
-    <!-- API Key Modal -->
-    <div id="api-key-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] opacity-0 transition-opacity duration-300">
-        <div class="modal-content relative bg-[var(--card-bg)] rounded-2xl shadow-xl w-full max-w-md p-6 border border-[var(--border-color)] scale-95 transition-transform duration-300">
-             <button id="close-api-key-modal" class="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)]">&times;</button>
+    <!-- Modals -->
+    <div id="api-key-modal" class="modal">
+        <div class="modal-content">
             <h2 class="text-xl font-bold mb-4">Enter OMDb API Key</h2>
-            <p class="text-[var(--text-secondary)] text-sm mb-4">This app requires a free API key from OMDb to search for movies. Please get one from <a href="http://www.omdbapi.com/apikey.aspx" target="_blank" class="text-[var(--accent-color)] underline">omdbapi.com</a>.</p>
+            <p class="text-[var(--text-secondary)] text-sm mb-4">This app requires a free API key from <a href="http://www.omdbapi.com/apikey.aspx" target="_blank" class="text-[var(--accent-primary)] underline">OMDb</a> to search for movies.</p>
             <form id="api-key-form">
-                <input id="api-key-input" type="text" placeholder="Your OMDb API Key" class="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]">
-                <button type="submit" class="w-full bg-[var(--accent-color)] text-white font-semibold py-2 rounded-lg">Save Key</button>
+                <input id="api-key-input" type="text" class="search-input mb-4" placeholder="Your OMDb API Key">
+                <button type="submit" class="button primary w-full">Save Key</button>
             </form>
         </div>
     </div>
     
-    <!-- Password Modal -->
-    <div id="password-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] opacity-0 transition-opacity duration-300">
-         <div class="modal-content relative bg-[var(--card-bg)] rounded-2xl shadow-xl w-full max-w-sm p-6 border border-[var(--border-color)] scale-95 transition-transform duration-300">
+    <div id="password-modal" class="modal">
+         <div class="modal-content">
             <h2 class="text-xl font-bold mb-4">Admin Password Required</h2>
-            <p class="text-[var(--text-secondary)] text-sm mb-4">Please enter the admin password to modify lists.</p>
             <form id="password-form">
-                <input id="password-input" type="password" placeholder="Admin Password" class="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]">
+                <input id="password-input" type="password" class="search-input mb-4" placeholder="Admin Password">
                 <div class="flex space-x-2">
-                    <button type="button" id="cancel-password" class="w-full bg-[var(--border-color)] text-white font-semibold py-2 rounded-lg">Cancel</button>
-                    <button type="submit" class="w-full bg-[var(--accent-color)] text-white font-semibold py-2 rounded-lg">Submit</button>
+                    <button type="button" id="cancel-password" class="button w-full">Cancel</button>
+                    <button type="submit" class="button primary w-full">Submit</button>
                 </div>
             </form>
         </div>
     </div>
-
+    
+    <div id="add-to-list-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold mb-4">Add to a Custom List</h2>
+            <div id="custom-list-options" class="flex flex-col gap-2">
+                <!-- List options will be injected here -->
+            </div>
+            <button id="cancel-add-to-list" class="button w-full mt-4">Cancel</button>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
