@@ -80,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- API COMMUNICATION ---
-    // MODIFIED: This function is now much more robust against server errors.
     async function apiRequest(method, body) {
         if (method !== 'GET' && !state.adminPassword) {
             toggleModal(G.passwordModal, true);
@@ -102,36 +101,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: body ? JSON.stringify(body) : null,
             });
 
-            // If response is not OK, get text and throw error to be caught below.
             if (!response.ok) {
                 const errorText = await response.text();
-                // Check for 401 Unauthorized specifically
                 if (response.status === 401) {
                     state.adminPassword = null;
                     setCookie('movieTrackerAdminPassword', '', -1);
                     toggleModal(G.passwordModal, true);
                     state.pendingAction = () => apiRequest(method, body);
-                    // Don't throw, just stop and wait for password
                     return; 
                 }
                 throw new Error(`Server responded with ${response.status}: ${errorText}`);
             }
 
-            // Handle no content response for non-GET requests
-            if (method !== 'GET') {
-                return { success: true };
-            }
-
-            // Now it's safer to parse JSON
+            if (method !== 'GET') return { success: true };
             const data = await response.json();
             return data;
 
         } catch (error) {
             console.error(`API Error (${method}):`, error);
-            // Don't use alert, as it can be disruptive. Log to console.
-            // A more user-friendly approach would be a toast notification.
             console.error("Failed to process API request. See console for details.");
-            // Return null or empty data to prevent further crashes
             return method === 'GET' ? { standardLists: [], customLists: [] } : null;
         }
     }
@@ -183,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- RENDERING (No changes here, but included for completeness) ---
+    // --- RENDERING ---
     function createMovieCard(movie, isSearch = false) {
         const isWatched = state.watched.some(m => m.imdb_id === movie.imdb_id);
         const isWatchlist = state.watchlist.some(m => m.imdb_id === movie.imdb_id);
@@ -313,23 +301,25 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (result) {
             await fetchUserLists();
-            // Also re-render search to update button states
             if (document.getElementById('search').classList.contains('active')) {
                 renderSearchResults();
             }
         }
     });
 
-    G.apiKeyForm.addEventListener('submit', (e) => {
+    // MODIFIED: Logic moved from here to the new init flow
+    G.apiKeyForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const key = G.apiKeyInput.value.trim();
         if (key) {
             state.omdbApiKey = key;
             localStorage.setItem('omdbApiKey', key);
             toggleModal(G.apiKeyModal, false);
+            await finishInitialization(); 
         }
     });
-     G.closeApiKeyModalBtn.addEventListener('click', () => toggleModal(G.apiKeyModal, false));
+    
+    G.closeApiKeyModalBtn.addEventListener('click', () => toggleModal(G.apiKeyModal, false));
 
     G.passwordForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -345,20 +335,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    
     G.cancelPasswordBtn.addEventListener('click', () => {
         state.pendingAction = null;
         toggleModal(G.passwordModal, false);
     });
 
-    // --- INITIALIZATION ---
-    async function init() {
-        if (!state.omdbApiKey) {
-            toggleModal(G.apiKeyModal, true);
-        }
+    // --- INITIALIZATION (REFACTORED) ---
+    async function finishInitialization() {
         document.getElementById('watchlist').classList.add('active');
         document.querySelector('.nav-item[data-page="watchlist"]').classList.add('active');
         await fetchUserLists();
         G.searchResults.innerHTML = renderEmptyState('Search for a movie to get started.');
+    }
+
+    async function init() {
+        if (!state.omdbApiKey) {
+            toggleModal(G.apiKeyModal, true);
+        } else {
+            await finishInitialization();
+        }
     }
 
     init();

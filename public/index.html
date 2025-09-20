@@ -10,65 +10,151 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #18181B; --card-bg: #27272A; --text-primary: #E4E4E7; --text-secondary: #A1A1AA;
-            --accent-color: #3b82f6; --border-color: #3F3F46; --danger-color: #ef4444; --success-color: #22c55e;
+            --bg-primary: #18181B; /* Zinc 900 */
+            --bg-secondary: #09090B; /* Zinc 950 */
+            --card-bg: #27272A; /* Zinc 800 */
+            --text-primary: #F4F4F5; /* Zinc 100 */
+            --text-secondary: #A1A1AA; /* Zinc 400 */
+            --accent-color: #3B82F6; /* Blue 500 */
+            --border-color: #3F3F46; /* Zinc 700 */
         }
-        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-        .nav-item.active { background-color: var(--accent-color); color: white; }
-        .page { display: none; animation: fadeIn 0.5s ease-in-out; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .nav-item {
+            transition: all 0.2s ease-in-out;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-item.active, .nav-item:hover {
+            color: var(--text-primary);
+            background-color: var(--card-bg);
+        }
+        .page { display: none; }
         .page.active { display: block; }
-        .action-btn.toggled-on { background-color: var(--accent-color); color: white; }
-        .action-btn.favourite.toggled-on { background-color: var(--danger-color); }
-        .action-btn.watched.toggled-on { background-color: var(--success-color); }
-        .modal { transition: opacity 0.3s ease-in-out; }
-        .modal-content { transition: transform 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+        @media (min-width: 1024px) {
+            .grid-container {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+        }
+        .action-btn {
+            background-color: rgba(63, 63, 70, 0.7); /* Zinc 700 with opacity */
+            color: var(--text-secondary);
+            transition: all 0.2s ease-in-out;
+        }
+        .action-btn:hover {
+            background-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        .action-btn.toggled-on {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        .modal { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s ease; }
     </style>
 </head>
-<body class="bg-[var(--bg-color)] text-[var(--text-primary)]">
-    <div class="container mx-auto max-w-7xl p-4 md:p-6 min-h-screen">
-        <!-- Header -->
-        <header class="bg-transparent py-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <svg class="w-9 h-9 text-white bg-blue-500 rounded-lg p-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v.48m11.98-6.19a6 6 0 0 0-5.84-7.38v.48m-11.98 6.19a6 6 0 0 0 5.84 7.38v.48m-5.84-7.38a6 6 0 0 1 5.84-7.38m11.98 6.19a6 6 0 0 0-11.98 0m11.98 0a6 6 0 0 1-11.98 0m11.98 0a6 6 0 0 1-5.84-7.38m5.84 7.38a6 6 0 0 0 5.84-7.38m-5.84 7.38v.48" /></svg>
-                    <h1 class="text-2xl md:text-3xl font-bold">Movie Tracker</h1>
+<body class="antialiased">
+
+    <div id="app-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <header class="sticky top-0 z-40 bg-opacity-80 backdrop-blur-md bg-[var(--bg-secondary)] py-4">
+            <nav class="flex items-center justify-between">
+                <div class="text-xl font-bold">MovieDB</div>
+                <div class="flex items-center space-x-2 bg-[var(--bg-primary)] p-1 rounded-full border border-[var(--border-color)]">
+                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="search">Search</a>
+                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="watchlist">Watchlist</a>
+                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="watched">Watched</a>
+                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="favourites">Favourites</a>
+                    <a href="#" class="nav-item px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-page="custom-lists">Custom Lists</a>
                 </div>
-                <nav class="flex items-center gap-2 bg-[var(--card-bg)]/70 backdrop-blur-sm p-1 rounded-full shadow-sm">
-                    <button class="nav-item px-4 py-2 text-sm font-semibold rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)]" data-page="search-page">Search</button>
-                    <button class="nav-item px-4 py-2 text-sm font-semibold rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] active" data-page="watchlist-page">Watchlist</button>
-                    <button class="nav-item px-4 py-2 text-sm font-semibold rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)]" data-page="watched-page">Watched</button>
-                    <button class="nav-item px-4 py-2 text-sm font-semibold rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)]" data-page="favourites-page">Favorites</button>
-                    <button class="nav-item px-4 py-2 text-sm font-semibold rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)]" data-page="lists-page">Lists</button>
-                </nav>
-            </div>
+            </nav>
         </header>
 
-        <!-- Main Content -->
-        <main class="mt-8">
-            <div id="search-page" class="page">
-                <form id="search-form" class="flex gap-2 p-2 mb-8 bg-[var(--card-bg)] rounded-full border border-[var(--border-color)] shadow-sm max-w-3xl mx-auto">
-                    <input id="search-input" type="text" placeholder="Search for movies like 'Inception', 'Dune'..." class="w-full bg-transparent border-none px-4 py-2 text-sm focus:outline-none focus:ring-0 placeholder:text-[var(--text-secondary)]">
-                    <button type="submit" class="bg-[var(--accent-color)] text-white font-semibold px-8 py-2 rounded-full text-sm hover:bg-blue-600">Search</button>
+        <main class="py-8">
+            <!-- Search Page -->
+            <div id="search" class="page">
+                <form id="search-form" class="mb-8">
+                    <input type="text" id="search-input" placeholder="Search for a movie..." class="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-full px-6 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:ring-2 focus:ring-[var(--accent-color)] focus:outline-none transition">
                 </form>
-                <div id="search-results" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
-            </div>
-            <div id="watchlist-page" class="page active"><div id="watchlist-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div></div>
-            <div id="watched-page" class="page"><div id="watched-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div></div>
-            <div id="favourites-page" class="page"><div id="favourites-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div></div>
-            <div id="lists-page" class="page">
-                <div class="flex justify-end mb-4">
-                    <button id="create-new-list-btn" class="bg-blue-500 text-white font-semibold px-5 py-2 rounded-full text-sm hover:bg-blue-600">Create New List</button>
+                <div id="search-results" class="grid-container">
+                    <!-- Search results will be injected here -->
                 </div>
-                <div id="custom-lists-content" class="space-y-8"></div>
+            </div>
+
+            <!-- Watchlist Page -->
+            <div id="watchlist" class="page">
+                <h1 class="text-3xl font-bold mb-6">My Watchlist</h1>
+                <div id="watchlist-content" class="grid-container">
+                    <!-- Watchlist movies will be injected here -->
+                </div>
+            </div>
+
+            <!-- Watched Page -->
+            <div id="watched" class="page">
+                 <h1 class="text-3xl font-bold mb-6">Watched Movies</h1>
+                <div id="watched-content" class="grid-container">
+                    <!-- Watched movies will be injected here -->
+                </div>
+            </div>
+
+            <!-- Favourites Page -->
+            <div id="favourites" class="page">
+                 <h1 class="text-3xl font-bold mb-6">Favourite Movies</h1>
+                <div id="favourites-content" class="grid-container">
+                    <!-- Favourite movies will be injected here -->
+                </div>
+            </div>
+            
+            <!-- Custom Lists Page -->
+            <div id="custom-lists" class="page">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold">Custom Lists</h1>
+                    <button id="create-new-list-btn" class="bg-[var(--accent-color)] text-white font-semibold px-4 py-2 rounded-full text-sm">Create New List</button>
+                </div>
+                <div id="custom-lists-content">
+                    <!-- Custom lists will be injected here -->
+                </div>
             </div>
         </main>
     </div>
+
+    <!-- MODIFIED: Increased z-index from z-50 to z-[100] for robustness -->
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] opacity-0 transition-opacity duration-300">
+        <div class="modal-content relative bg-[var(--card-bg)] rounded-2xl shadow-xl w-full max-w-md p-6 border border-[var(--border-color)] scale-95 transition-transform duration-300">
+             <button id="close-api-key-modal" class="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)]">&times;</button>
+            <h2 class="text-xl font-bold mb-4">Enter OMDb API Key</h2>
+            <p class="text-[var(--text-secondary)] text-sm mb-4">This app requires a free API key from OMDb to search for movies. Please get one from <a href="http://www.omdbapi.com/apikey.aspx" target="_blank" class="text-[var(--accent-color)] underline">omdbapi.com</a>.</p>
+            <form id="api-key-form">
+                <input id="api-key-input" type="text" placeholder="Your OMDb API Key" class="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]">
+                <button type="submit" class="w-full bg-[var(--accent-color)] text-white font-semibold py-2 rounded-lg">Save Key</button>
+            </form>
+        </div>
+    </div>
     
-    <!-- Modals -->
-    <div id="password-modal" class="modal fixed inset-0 z-50 flex items-center justify-center hidden opacity-0"><div class="modal-backdrop fixed inset-0 bg-black/70"></div><div class="modal-content bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl shadow-lg p-6 w-11/12 max-w-xs mx-auto"><h3 class="text-lg font-bold text-center mb-2">Admin Password Required</h3><p class="text-sm text-center text-[var(--text-secondary)] mb-4">A password is needed to modify lists.</p><form id="password-form"><input id="password-input" type="password" class="w-full bg-zinc-700 border-zinc-600 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4"><div class="flex gap-3"><button type="button" id="cancel-password" class="w-full bg-zinc-700 font-semibold py-2.5 rounded-full text-sm hover:bg-zinc-600">Cancel</button><button type="submit" class="w-full bg-blue-500 text-white font-semibold py-2.5 rounded-full text-sm">Save</button></div></form></div></div>
-    <div id="api-key-modal" class="modal fixed inset-0 z-50 flex items-center justify-center hidden opacity-0"><div class="modal-backdrop fixed inset-0 bg-black/70"></div><div class="modal-content bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl shadow-lg p-6 w-11/12 max-w-sm mx-auto"><h3 class="text-lg font-bold text-center mb-2">Enter OMDb API Key</h3><p class="text-sm text-center text-[var(--text-secondary)] mb-4">Get a free key from <a href="http://www.omdbapi.com/apikey.aspx" target="_blank" class="text-blue-500 underline">omdbapi.com</a>.</p><form id="api-key-form"><input id="api-key-input" type="text" class="w-full bg-zinc-700 border-zinc-600 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4"><button type="submit" class="w-full bg-blue-500 text-white font-semibold py-2.5 rounded-full text-sm">Save</button></form></div></div>
-    
-    <script src="script.js" defer></script>
+    <!-- Password Modal -->
+    <div id="password-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] opacity-0 transition-opacity duration-300">
+         <div class="modal-content relative bg-[var(--card-bg)] rounded-2xl shadow-xl w-full max-w-sm p-6 border border-[var(--border-color)] scale-95 transition-transform duration-300">
+            <h2 class="text-xl font-bold mb-4">Admin Password Required</h2>
+            <p class="text-[var(--text-secondary)] text-sm mb-4">Please enter the admin password to modify lists.</p>
+            <form id="password-form">
+                <input id="password-input" type="password" placeholder="Admin Password" class="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]">
+                <div class="flex space-x-2">
+                    <button type="button" id="cancel-password" class="w-full bg-[var(--border-color)] text-white font-semibold py-2 rounded-lg">Cancel</button>
+                    <button type="submit" class="w-full bg-[var(--accent-color)] text-white font-semibold py-2 rounded-lg">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script src="script.js"></script>
 </body>
 </html>
+
