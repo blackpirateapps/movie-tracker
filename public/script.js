@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- STATE MANAGEMENT ---
     let state = {
-        userId: getCookie('movieTrackerUserId') || setUserIdCookie(),
         adminPassword: getCookie('movieTrackerAdminPassword'),
         omdbApiKey: localStorage.getItem('omdbApiKey'),
         watchlist: [], watched: [], favourites: [], customLists: [], currentSearch: [],
@@ -42,10 +41,30 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- HELPERS & API ---
-    function setCookie(name, value, days) { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax; Secure"; }
-    function getCookie(name) { const nameEQ = name + "="; const ca = document.cookie.split(';'); for (let c of ca) { c = c.trim(); if (c.startsWith(nameEQ)) return c.substring(nameEQ.length, c.length); } return null; }
-    function setUserIdCookie() { const newUserId = crypto.randomUUID(); setCookie('movieTrackerUserId', newUserId, 365); return newUserId; }
-    function toggleModal(modal, show) { if (!modal) return; modal.classList.toggle('show', show); }
+    function setCookie(name, value, days) {
+        let expires = "";
+        if (days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax; Secure";
+    }
+
+    function getCookie(name) {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for (let c of ca) {
+            c = c.trim();
+            if (c.startsWith(nameEQ)) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    function toggleModal(modal, show) {
+        if (!modal) return;
+        modal.classList.toggle('show', show);
+    }
 
     async function apiRequest(endpoint, method = 'GET', body = null) {
         if (method !== 'GET' && !state.adminPassword) {
@@ -59,11 +78,13 @@ document.addEventListener('DOMContentLoaded', () => {
             headers['X-Admin-Password'] = state.adminPassword;
         }
 
-        const url = method === 'GET' ? `/api/${endpoint}?userId=${state.userId}` : `/api/${endpoint}`;
+        const url = `/api/${endpoint}`;
         
         try {
             const fetchOptions = { method, headers };
-            if (body) fetchOptions.body = JSON.stringify(body);
+            if (body) {
+                fetchOptions.body = JSON.stringify(body);
+            }
 
             const response = await fetch(url, fetchOptions);
             
@@ -79,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return method === 'GET' ? response.json() : { success: true };
         } catch (error) {
             console.error(`API Error (${method} on ${endpoint}):`, error);
-            G.body.classList.add('loaded'); // Hide skeletons even on error
+            G.body.classList.add('loaded');
             return null;
         }
     }
@@ -221,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                            : actionBtn.classList.contains('toggle-favourite-btn') ? 'favourites' : '';
             
             if (listType) {
-                const result = await apiRequest('modify', 'POST', { action: 'TOGGLE_STANDARD_LIST', userId: state.userId, listType, movie: movieData });
+                const result = await apiRequest('modify', 'POST', { action: 'TOGGLE_STANDARD_LIST', listType, movie: movieData });
                 if (result) {
                     await fetchUserLists();
                     if (document.getElementById('search').classList.contains('active')) {
@@ -235,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (deleteBtn) {
             const listId = deleteBtn.closest('.custom-list-section').dataset.id;
             if (confirm('Are you sure you want to delete this entire list?')) {
-                 const result = await apiRequest('modify', 'POST', { action: 'DELETE_LIST', userId: state.userId, listId });
+                 const result = await apiRequest('modify', 'POST', { action: 'DELETE_LIST', listId });
                  if (result) await fetchUserLists();
             }
         }
@@ -245,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const choiceBtn = e.target.closest('button');
         if (choiceBtn && state.movieToAddToList) {
             const listId = choiceBtn.dataset.id;
-            const result = await apiRequest('modify', 'POST', { action: 'ADD_TO_CUSTOM_LIST', userId: state.userId, listId, movie: state.movieToAddToList });
+            const result = await apiRequest('modify', 'POST', { action: 'ADD_TO_CUSTOM_LIST', listId, movie: state.movieToAddToList });
             if (result) {
                 await fetchUserLists();
                 toggleModal(G.addToListModal, false);
@@ -257,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     G.createNewListBtn.addEventListener('click', async () => {
         const name = prompt('Enter a name for your new list:');
         if (name && name.trim()) {
-            const result = await apiRequest('modify', 'POST', { action: 'CREATE_LIST', userId: state.userId, name: name.trim() });
+            const result = await apiRequest('modify', 'POST', { action: 'CREATE_LIST', name: name.trim() });
             if (result) await fetchUserLists();
         }
     });
@@ -295,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function init() {
         if (!state.omdbApiKey) {
             toggleModal(G.apiKeyModal, true);
-            G.body.classList.add('loaded'); // Hide skeletons if waiting for user input
+            G.body.classList.add('loaded');
         } else {
             await fetchUserLists();
         }
