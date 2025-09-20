@@ -1,0 +1,19 @@
+{
+  "name": "movie-tracker-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A web application for tracking movies using Vercel and Turso.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@libsql/client": "latest",
+    "@vercel/blob": "latest",
+    "sharp": "latest"
+  },
+  "author": "",
+  "license": "ISC"
+}
+
