@@ -9,15 +9,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #121212;
-            --bg-secondary: #1E1E1E;
-            --card-bg: #2A2A2A;
-            --text-primary: #EAEAEA;
-            --text-secondary: #A0A0A0;
-            --accent-primary: #3B82F6;
-            --accent-secondary: #2563EB;
-            --border-color: #383838;
-            --danger-color: #EF4444;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f8f8;
+            --text-primary: #1c1c1e;
+            --text-secondary: #8e8e93;
+            --accent-primary: #007aff;
+            --accent-secondary: #0056cc;
+            --border-color: #e5e5e5;
+            --danger-color: #ff3b30;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -27,234 +26,311 @@
             line-height: 1.6;
         }
         .container {
-            max-width: 1200px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: 0 20px;
         }
-        header { text-align: center; margin-bottom: 3rem; }
-        h1 { font-size: 2.25rem; font-weight: 700; margin-bottom: 0.5rem; }
-        .subtitle { font-size: 1rem; color: var(--text-secondary); }
         .page { display: none; }
         .page.active { display: block; }
-        .nav-controls {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 2.5rem;
-            background: var(--bg-secondary);
-            padding: 0.5rem;
-            border-radius: 999px;
-            border: 1px solid var(--border-color);
-        }
-        .nav-item {
-            color: var(--text-secondary);
-            text-decoration: none;
-            cursor: pointer;
-            padding: 0.5rem 1.25rem;
-            border-radius: 999px;
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-        .nav-item.active, .nav-item:hover {
-            background-color: var(--card-bg);
-            color: var(--text-primary);
-        }
-        .search-container { margin-bottom: 2rem; }
-        .search-input {
-            width: 100%;
-            border: 1px solid var(--border-color);
-            background: var(--bg-secondary);
-            padding: 0.8rem 1.2rem;
-            font-size: 1rem;
-            color: var(--text-primary);
-            border-radius: 999px;
-            transition: all 0.2s ease;
-        }
-        .search-input:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-        }
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .section-title { font-size: 1.25rem; font-weight: 600; }
-        .button {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            cursor: pointer;
-            border-radius: 999px;
-            transition: all 0.2s ease;
-        }
-        .button.primary {
-            background: var(--accent-primary);
-            color: #ffffff;
-            border-color: var(--accent-primary);
-        }
-        .button.primary:hover { background: var(--accent-secondary); }
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1.5rem;
-        }
-        .movie-card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            overflow: hidden;
+        
+        /* New Profile Header */
+        .profile-header {
+            position: relative;
+            height: 400px;
+            color: white;
             display: flex;
             flex-direction: column;
+            justify-content: flex-end;
+            margin-bottom: 2rem;
         }
-        .movie-card img {
-            width: 100%;
-            aspect-ratio: 2 / 3;
-            object-fit: cover;
-            background-color: var(--bg-secondary);
+        .cover-image {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-size: cover;
+            background-position: center 20%;
+            z-index: 1;
         }
-        .movie-card-content { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; }
-        .movie-title { font-weight: 600; color: var(--text-primary); flex-grow: 1; }
-        .movie-meta { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem; }
-        .movie-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 1rem; }
-        .action-btn {
-            background-color: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            height: 36px;
-            border-radius: 8px;
+        .cover-image::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0) 100%);
+        }
+        .profile-content {
+            position: relative;
+            z-index: 2;
+            padding-bottom: 2rem;
+        }
+        .profile-info {
+            display: flex;
+            align-items: flex-end;
+            gap: 1.5rem;
+        }
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            background-color: var(--accent-primary);
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 50%;
+            border: 3px solid white;
         }
-        .action-btn:hover { background-color: var(--border-color); color: var(--text-primary); }
-        .action-btn.toggled-on { background-color: var(--accent-primary); color: white; border-color: var(--accent-primary); }
+        .profile-details h1 {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .profile-bio {
+            font-size: 0.9rem;
+            max-width: 60ch;
+            margin-top: 0.5rem;
+            color: #d1d1d6;
+        }
+        .profile-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .profile-stats strong {
+            font-weight: 600;
+            color: white;
+        }
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .social-links a {
+            color: #d1d1d6;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .social-links a:hover { color: white; }
+        
+        /* Main Navigation */
+        .main-nav {
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .main-nav .container { display: flex; justify-content: space-between; align-items: center; }
+        .nav-logo { font-weight: bold; font-size: 1.2rem; cursor: pointer; }
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            margin-left: 1.5rem;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active { color: var(--text-primary); }
+
+        /* Horizontally Scrolling Lists */
+        .movie-row { margin-bottom: 3rem; }
+        .row-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .row-header h2 { font-size: 1.25rem; font-weight: 600; }
+        .show-all-btn {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .show-all-btn:hover { color: var(--text-primary); }
+        .row-content {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 1.5rem; /* For scrollbar */
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .row-content::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
+        
+        .poster-card {
+            flex-shrink: 0;
+            width: 150px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .poster-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+        .poster-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Generic styles for full list pages */
+        .list-container { display: flex; flex-direction: column; gap: 0.75rem; }
+        .movie-item {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .movie-info { flex-grow: 1; }
+        .movie-title { font-weight: 500; color: var(--text-primary); }
+        .movie-meta { color: var(--text-secondary); font-size: 0.85rem; }
+        .movie-actions { display: flex; align-items: center; gap: 1rem; }
+        .action-btn {
+            background: none; border: none; color: var(--text-secondary);
+            font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: color 0.2s ease;
+        }
+        .action-btn:hover { color: var(--text-primary); }
+        .action-btn.toggled-on { color: var(--accent-primary); }
+        
+        /* Modal Styles */
         .modal {
             position: fixed; inset: 0; z-index: 100;
             display: flex; align-items: center; justify-content: center;
-            background-color: rgba(0,0,0,0.7);
+            background-color: rgba(0,0,0,0.5);
             opacity: 0; visibility: hidden; transition: all 0.3s ease;
         }
         .modal.show { opacity: 1; visibility: visible; }
         .modal-content {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 2rem;
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid var(--border-color);
-            transform: scale(0.95);
-            transition: all 0.3s ease;
+            background: var(--bg-primary); border-radius: 12px; padding: 2rem;
+            width: 100%; max-width: 400px; border: 1px solid var(--border-color);
+            transform: scale(0.95); transition: all 0.3s ease;
         }
         .modal.show .modal-content { transform: scale(1); }
-        .custom-list-section {
-            background-color: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid var(--border-color);
-            margin-bottom: 2rem;
+        .empty-state { text-align: center; color: var(--text-secondary); padding: 3rem 0; }
+        .search-input {
+            width: 100%; border: 1px solid var(--border-color); background: var(--bg-secondary);
+            padding: 0.8rem 1.2rem; font-size: 1rem; color: var(--text-primary);
+            border-radius: 8px; transition: all 0.2s ease;
         }
-        .empty-state { grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 3rem 0; }
+        .search-input:focus {
+            outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+        }
+        .button {
+            background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 0.5rem 1rem;
+            font-size: 0.9rem; font-weight: 500; color: var(--text-primary); cursor: pointer;
+            border-radius: 8px; transition: all 0.2s ease;
+        }
+        .button.primary {
+            background: var(--accent-primary); color: #ffffff; border-color: var(--accent-primary);
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <h1>Movie Tracker</h1>
-            <div class="subtitle">Your personal movie database</div>
+    <nav class="main-nav">
+        <div class="container">
+            <div class="nav-logo" data-page="profile">MovieTracker</div>
+            <div class="nav-links">
+                <a href="#" data-page="profile" class="active">Profile</a>
+                <a href="#" data-page="search">Search</a>
+                <a href="#" data-page="custom-lists">Custom Lists</a>
+            </div>
+        </div>
+    </nav>
+
+    <div id="profile" class="page active">
+        <header class="profile-header">
+            <div id="cover-image" class="cover-image"></div>
+            <div class="profile-content container">
+                <div class="profile-info">
+                    <div class="profile-avatar">BP</div>
+                    <div class="profile-details">
+                        <h1>BlackPirateX</h1>
+                        <div class="profile-stats">
+                            <div><strong id="stat-films">0</strong> FILMS</div>
+                            <div><strong id="stat-watchlist">0</strong> IN WATCHLIST</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="profile-bio">Just a movie enthusiast tracking my cinematic journey. <br>Opinions are my own.</p>
+                <div class="social-links">
+                    <a href="#" target="_blank">Twitter</a>
+                    <a href="#" target="_blank">Instagram</a>
+                    <a href="#" target="_blank">Website</a>
+                </div>
+            </div>
         </header>
 
-        <nav class="nav-controls">
-            <a class="nav-item active" data-page="search">Search</a>
-            <a class="nav-item" data-page="watchlist">Watchlist</a>
-            <a class="nav-item" data-page="watched">Watched</a>
-            <a class="nav-item" data-page="favourites">Favourites</a>
-            <a class="nav-item" data-page="custom-lists">Custom Lists</a>
-        </nav>
-
-        <main>
-            <!-- Search Page -->
-            <div id="search" class="page active">
-                <div class="search-container">
-                    <form id="search-form">
-                        <input type="text" id="search-input" placeholder="Search for a movie..." class="search-input">
-                    </form>
+        <main class="container">
+            <section id="profile-watched" class="movie-row">
+                <div class="row-header">
+                    <h2>Watched</h2>
+                    <a href="#" class="show-all-btn" data-page="watched">Show All</a>
                 </div>
-                <div id="search-results" class="grid-container"></div>
-            </div>
-
-            <!-- Watchlist Page -->
-            <div id="watchlist" class="page">
-                <div class="section-header"><h2 class="section-title">My Watchlist</h2></div>
-                <div id="watchlist-content" class="grid-container"></div>
-            </div>
-
-            <!-- Watched Page -->
-            <div id="watched" class="page">
-                <div class="section-header"><h2 class="section-title">Watched Movies</h2></div>
-                <div id="watched-content" class="grid-container"></div>
-            </div>
-
-            <!-- Favourites Page -->
-            <div id="favourites" class="page">
-                <div class="section-header"><h2 class="section-title">Favourite Movies</h2></div>
-                <div id="favourites-content" class="grid-container"></div>
-            </div>
+                <div class="row-content"></div>
+            </section>
             
-            <!-- Custom Lists Page -->
-            <div id="custom-lists" class="page">
-                <div class="section-header">
-                    <h2 class="section-title">Custom Lists</h2>
-                    <button id="create-new-list-btn" class="button primary">+ New List</button>
+            <section id="profile-watchlist" class="movie-row">
+                <div class="row-header">
+                    <h2>Watchlist</h2>
+                    <a href="#" class="show-all-btn" data-page="watchlist">Show All</a>
                 </div>
-                <div id="custom-lists-content"></div>
-            </div>
+                <div class="row-content"></div>
+            </section>
+
+            <section id="profile-favourites" class="movie-row">
+                <div class="row-header">
+                    <h2>Favourites</h2>
+                    <a href="#" class="show-all-btn" data-page="favourites">Show All</a>
+                </div>
+                <div class="row-content"></div>
+            </section>
         </main>
     </div>
 
-    <!-- Modals -->
-    <div id="api-key-modal" class="modal">
-        <div class="modal-content">
-            <h2 class="text-xl font-bold mb-4">Enter OMDb API Key</h2>
-            <p class="text-[var(--text-secondary)] text-sm mb-4">This app requires a free API key from <a href="http://www.omdbapi.com/apikey.aspx" target="_blank" class="text-[var(--accent-primary)] underline">OMDb</a> to search for movies.</p>
-            <form id="api-key-form">
-                <input id="api-key-input" type="text" class="search-input mb-4" placeholder="Your OMDb API Key">
-                <button type="submit" class="button primary w-full">Save Key</button>
+    <!-- The full-page views are now hidden by default -->
+    <div id="search" class="page container">
+        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Search Movies</h2>
+        <div class="search-container">
+            <form id="search-form">
+                <input type="text" id="search-input" placeholder="Search for a movie..." class="search-input">
             </form>
         </div>
+        <div id="search-results" class="list-container"></div>
     </div>
     
-    <div id="password-modal" class="modal">
-         <div class="modal-content">
-            <h2 class="text-xl font-bold mb-4">Admin Password Required</h2>
-            <form id="password-form">
-                <input id="password-input" type="password" class="search-input mb-4" placeholder="Admin Password">
-                <div class="flex space-x-2">
-                    <button type="button" id="cancel-password" class="button w-full">Cancel</button>
-                    <button type="submit" class="button primary w-full">Submit</button>
-                </div>
-            </form>
-        </div>
+    <div id="watchlist" class="page container">
+        <div class="section-header"><h2 style="font-size: 1.5rem;">My Watchlist</h2></div>
+        <div id="watchlist-content" class="list-container"></div>
     </div>
     
-    <div id="add-to-list-modal" class="modal">
-        <div class="modal-content">
-            <h2 class="text-xl font-bold mb-4">Add to a Custom List</h2>
-            <div id="custom-list-options" class="flex flex-col gap-2">
-                <!-- List options will be injected here -->
-            </div>
-            <button id="cancel-add-to-list" class="button w-full mt-4">Cancel</button>
-        </div>
+    <div id="watched" class="page container">
+        <div class="section-header"><h2 style="font-size: 1.5rem;">Watched Movies</h2></div>
+        <div id="watched-content" class="list-container"></div>
     </div>
+    
+    <div id="favourites" class="page container">
+        <div class="section-header"><h2 style="font-size: 1.5rem;">Favourite Movies</h2></div>
+        <div id="favourites-content" class="list-container"></div>
+    </div>
+    
+    <div id="custom-lists" class="page container">
+        <div class="section-header">
+            <h2 style="font-size: 1.5rem;">Custom Lists</h2>
+            <button id="create-new-list-btn" class="button primary">+ New List</button>
+        </div>
+        <div id="custom-lists-content"></div>
+    </div>
+
+    <!-- Modals (unchanged) -->
+    <div id="api-key-modal" class="modal">...</div>
+    <div id="password-modal" class="modal">...</div>
+    <div id="add-to-list-modal" class="modal">...</div>
 
     <script src="script.js"></script>
 </body>
